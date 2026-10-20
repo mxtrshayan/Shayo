@@ -1,0 +1,15 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+
+type Order = { id: string; orderNumber: string; customerName: string; phone: string; city: string; totalPaisa: number; status: string; paymentStatus: string; createdAt: string; items: { productName: string; quantity: number }[] };
+const statuses = ["PENDING_CONFIRMATION", "CONFIRMED", "PROCESSING", "SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"];
+export default function AdminOrders() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [message, setMessage] = useState("");
+  async function load() { const response = await fetch("/api/admin/orders"); if (response.ok) setOrders((await response.json()).orders); }
+  useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, []);
+  async function update(orderId: string, status: string, paymentStatus?: string) { const response = await fetch("/api/admin/orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId, status, paymentStatus }) }); setMessage(response.ok ? "Order updated." : (await response.json()).error); void load(); }
+  return <main className="admin-shell"><header className="admin-header"><Link className="logo" href="/admin">SHAYO<span>.</span></Link><nav className="admin-nav"><Link href="/admin/products">Products</Link><Link href="/admin/orders">Orders</Link><Link href="/admin/settings">Settings</Link></nav><form action="/api/admin/logout" method="post"><button className="admin-link">Log out</button></form></header><section className="admin-content"><Link className="admin-back" href="/admin">← Dashboard</Link><div className="admin-eyebrow">Store operations</div><h1>Review orders.</h1><p className="admin-muted">Update fulfilment and payment status as orders move through the store.</p>{message && <p className="admin-message">{message}</p>}<div className="admin-order-list">{orders.length === 0 && <div className="admin-panel"><p className="admin-muted">No orders yet.</p></div>}{orders.map((order) => <article className="admin-order admin-panel" key={order.id}><div><strong>{order.orderNumber}</strong><h2>{order.customerName}</h2><p className="admin-muted">{order.phone} · {order.city}</p><p className="admin-muted">{order.items.map((item) => `${item.productName} × ${item.quantity}`).join(", ")}</p></div><div className="admin-order-controls"><strong>PKR {(order.totalPaisa / 100).toLocaleString()}</strong><label>Status<select value={order.status} onChange={(event) => update(order.id, event.target.value, order.paymentStatus)}>{statuses.map((status) => <option key={status}>{status}</option>)}</select></label><label>Payment<select value={order.paymentStatus} onChange={(event) => update(order.id, order.status, event.target.value)}><option>PENDING</option><option>VERIFIED</option><option>REJECTED</option></select></label><small>{new Date(order.createdAt).toLocaleString()}</small></div></article>)}</div></section></main>;
+}
