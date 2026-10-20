@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Product {
+  id              String                 @id @default(cuid())
+  name            String
+  slug            String                 @unique
+  sku             String                 @unique
+  shortDescription String
+  description     String
+  pricePaisa      Int
+  originalPrice   Int?
+  stockQuantity   Int                    @default(0)
+  lowStockAt      Int                    @default(5)
+  featured        Boolean                @default(false)
+  published       Boolean                @default(true)
+  warranty        String?
+  categoryId      String
+  category        Category               @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images          ProductImage[]
+  specifications  ProductSpecification[]
+  orderItems      OrderItem[]
+  inventory       InventoryMovement[]
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@index([categoryId, published])
+  @@index([published, featured])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  path      String
+  alt       String
+  mimeType  String
+  sizeBytes Int
+  isPrimary Boolean @default(false)
+  sortOrder Int     @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([productId, isPrimary])
+}
+
+model ProductSpecification {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label     String
+  value     String
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id                   String              @id @default(cuid())
+  orderNumber          String              @unique
+  customerName         String
+  phone                String
+  city                 String
+  address              String
+  instructions         String?
+  subtotalPaisa        Int
+  deliveryFeePaisa     Int
+  totalPaisa           Int
+  paymentMethod        PaymentMethod
+  paymentStatus        PaymentStatus       @default(PENDING)
+  status               OrderStatus         @default(PENDING_CONFIRMATION)
+  idempotencyKey       String              @unique
+  items                OrderItem[]
+  payment             Payment?
+  statusHistory        OrderStatusHistory[]
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@index([phone, orderNumber])
+  @@index([status, createdAt])
+}
+
+model OrderItem {
+  id             String  @id @default(cuid())
+  orderId        String
+  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productName    String
+  sku            String
+  quantity       Int
+  unitPricePaisa Int
+  lineTotalPaisa Int
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  orderId        String        @unique
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  transactionRef String?
+  verifiedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model InventoryMovement {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity  Int
+  reason    String
+  orderId   String?
+  createdAt DateTime @default(now())
+
+  @@index([productId, createdAt])
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+}
+
+model StoreSettings {
+  id                 String  @id @default("default")
+  storeName          String  @default("SHAYO")
+  tagline            String  @default("Your everyday tech, delivered.")
+  whatsappNumber     String  @default("03162609779")
+  easypaisaTitle     String  @default("SHAYAN")
+  easypaisaNumber    String  @default("03162609779")
+  jazzcashTitle      String?
+  jazzcashNumber     String?
+  deliveryFeePaisa   Int     @default(25000)
+  freeDeliveryPaisa  Int     @default(500000)
+  lowStockThreshold  Int     @default(5)
+  facebookUrl        String?
+  instagramUrl       String?
+  linkedinUrl        String?
+  updatedAt          DateTime @updatedAt
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String
+  entity    String
+  entityId  String?
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  @@index([adminId, createdAt])
+}
+
+enum PaymentMethod {
+  COD
+  EASYPAISA
+  JAZZCASH
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum OrderStatus {
+  PENDING_CONFIRMATION
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
