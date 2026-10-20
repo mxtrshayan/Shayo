@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { SiteFooter } from "@/components/site-footer";
 import {
   ArrowRight,
@@ -43,13 +44,35 @@ const categories = ["All products", "Smartwatches", "Wireless Earbuds", "Speaker
 const money = (value: number) => `PKR ${value.toLocaleString("en-PK")}`;
 
 export default function Home() {
+  const router = useRouter();
   const [category, setCategory] = useState("All products");
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<Product[]>([]);
+  const [cartHydrated, setCartHydrated] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [dark, setDark] = useState(false);
   const [saved, setSaved] = useState<number[]>([]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const savedCart = window.localStorage.getItem("shayo-cart");
+      if (savedCart) {
+        try {
+          const parsed = JSON.parse(savedCart);
+          if (Array.isArray(parsed)) setCart(parsed);
+        } catch {
+          window.localStorage.removeItem("shayo-cart");
+        }
+      }
+      setCartHydrated(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (cartHydrated) window.localStorage.setItem("shayo-cart", JSON.stringify(cart));
+  }, [cart, cartHydrated]);
 
   const filtered = useMemo(() => products.filter((product) => {
     const matchesCategory = category === "All products" || product.category === category;
@@ -109,7 +132,7 @@ export default function Home() {
 
       <SiteFooter />
 
-      {cartOpen && <div className="drawer-backdrop" onClick={() => setCartOpen(false)}><aside className="cart-drawer" onClick={(e) => e.stopPropagation()}><div className="drawer-heading"><h2>Your bag <small>{cart.length} items</small></h2><button className="icon-button" onClick={() => setCartOpen(false)} aria-label="Close cart"><X size={20} /></button></div>{cart.length === 0 ? <div className="empty-cart"><ShoppingBag size={38} /><h3>Your bag is waiting</h3><p>Add something useful to get started.</p><button className="primary-button" onClick={() => setCartOpen(false)}>Continue shopping</button></div> : <><div className="cart-items">{cart.map((item, index) => <div className="cart-item" key={`${item.id}-${index}`}><Image src={item.image} alt="" width={67} height={67} /><div><span>{item.category}</span><h3>{item.name}</h3><strong>{money(item.price)}</strong></div><button aria-label="Remove item" onClick={() => setCart(cart.filter((_, i) => i !== index))}><X size={15} /></button></div>)}</div><div className="cart-summary"><div><span>Subtotal</span><strong>{money(cartTotal)}</strong></div><div><span>Delivery</span><strong>{cartTotal >= 5000 ? "Free" : money(250)}</strong></div><div className="total"><span>Total</span><strong>{money(cartTotal + (cartTotal >= 5000 ? 0 : 250))}</strong></div><button className="primary-button checkout">Continue to checkout <ArrowRight size={17} /></button><small>Secure checkout · COD available</small></div></>}</aside></div>}
+      {cartOpen && <div className="drawer-backdrop" onClick={() => setCartOpen(false)}><aside className="cart-drawer" onClick={(e) => e.stopPropagation()}><div className="drawer-heading"><h2>Your bag <small>{cart.length} items</small></h2><button className="icon-button" onClick={() => setCartOpen(false)} aria-label="Close cart"><X size={20} /></button></div>{cart.length === 0 ? <div className="empty-cart"><ShoppingBag size={38} /><h3>Your bag is waiting</h3><p>Add something useful to get started.</p><button className="primary-button" onClick={() => setCartOpen(false)}>Continue shopping</button></div> : <><div className="cart-items">{cart.map((item, index) => <div className="cart-item" key={`${item.id}-${index}`}><Image src={item.image} alt="" width={67} height={67} /><div><span>{item.category}</span><h3>{item.name}</h3><strong>{money(item.price)}</strong></div><button aria-label="Remove item" onClick={() => setCart(cart.filter((_, i) => i !== index))}><X size={15} /></button></div>)}</div><div className="cart-summary"><div><span>Subtotal</span><strong>{money(cartTotal)}</strong></div><div><span>Delivery</span><strong>{cartTotal >= 5000 ? "Free" : money(250)}</strong></div><div className="total"><span>Total</span><strong>{money(cartTotal + (cartTotal >= 5000 ? 0 : 250))}</strong></div><button className="primary-button checkout" onClick={() => { setCartOpen(false); router.push("/cart"); }}>Continue to cart <ArrowRight size={17} /></button><small>Secure checkout · COD available</small></div></>}</aside></div>}
     </main>
   );
 }

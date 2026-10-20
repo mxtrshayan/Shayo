@@ -32,6 +32,7 @@ export function SiteFooter() {
           <a href="mailto:hello@shayo.pk?subject=Returns%20question">Returns & refunds</a>
           <a href="mailto:hello@shayo.pk?subject=Privacy%20question">Privacy</a>
           <a href="mailto:hello@shayo.pk?subject=Order%20support">Order support</a>
+          <Link href="/admin/login">Admin login</Link>
         </div>
       </div>
       <div className="footer-connect">
