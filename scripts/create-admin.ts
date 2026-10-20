@@ -7,11 +7,11 @@ async function main() {
   const terminal = createInterface({ input, output });
 
   try {
-    const email = (await terminal.question("Admin email: ")).trim().toLowerCase();
-    const password = await terminal.question("Admin password (minimum 12 characters): ");
+    const email = (process.env.ADMIN_EMAIL ?? await terminal.question("Admin email: ")).trim().toLowerCase();
+    const password = process.env.ADMIN_PASSWORD ?? await terminal.question("Admin password (minimum 8 characters): ");
 
-    if (!email || !email.includes("@") || password.length < 12) {
-      throw new Error("A valid email and a password of at least 12 characters are required.");
+    if (!email || !email.includes("@") || password.length < 8) {
+      throw new Error("A valid email and a password of at least 8 characters are required.");
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
