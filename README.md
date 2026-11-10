@@ -1,63 +1,84 @@
 # SHAYO
 
-Premium Pakistani tech-gadget storefront for SHAYO — **Your everyday tech, delivered.**
+Premium everyday tech storefront for Pakistan, built with Next.js 16, React 19, Prisma 7, and SQLite.
 
-## Current implementation
+## What works
 
-- Responsive storefront with a light-first theme and dark-mode toggle.
-- Dedicated About page explaining that SHAYO is a sister company of [ShyonLabs](https://www.shyonlabs.tech/), an AI-powered software and digital products studio.
-- Search and category filtering across the product collection.
-- Product cards with real product imagery, pricing, badges, and add-to-bag interactions.
-- Cart drawer with delivery threshold calculation and checkout handoff.
-- WhatsApp support link using `923162609779`.
-- Prisma 7 + SQLite schema and migration for products, orders, payments, inventory, settings, and admin audit data.
-- Seeded development catalogue served by `/api/products`.
-- Guest order endpoint at `/api/orders` with server-side totals, stock checks, idempotency keys, and separate payment/order statuses.
-- Secure admin login at `/admin/login` with bcrypt password hashes and signed HttpOnly sessions.
-- Database-backed admin overview at `/admin`.
-- Deployment-safe environment variable template.
+- Responsive premium storefront with original synthetic product images, floating/perspective animations, scroll reveals, local fonts, and reduced-motion support.
+- Database-backed collection with search, category filters, sorting, product details, and persistent saved picks.
+- Persistent shopping bag with quantities, live pricing/stock, and delivery calculation.
+- Guest checkout with COD and configured manual Easypaisa/JazzCash transfers.
+- Server-calculated totals, stock reservations, idempotent retries, and order confirmation.
+- Private order tracking using order number and checkout mobile number.
+- Authenticated admin dashboard, full product editing/archiving and image uploads, inventory, order/payment management, and delivery/payment settings.
+- WhatsApp support, delivery/returns/privacy information, and SHAYO / ShyonLabs story.
 
 ## Run locally
 
 ```bash
-npm install
+npm ci
+cp .env.example .env # only for a fresh checkout; preserve your existing .env
 npm run db:generate
 npm run db:migrate
 npm run db:seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open http://localhost:3000. Admin: http://localhost:3000/admin.
 
-## Create the first administrator
+The seed script adds/updates six development products and their generated imagery. It preserves existing product prices, stock, publication state, orders, and settings. It updates the sample descriptions and primary image paths.
 
-Set a strong local session secret in `.env`, then run:
+## Administrator access
+
+Existing administrators are preserved. To create an administrator or intentionally reset one account's password:
 
 ```bash
 npm run admin:create
 ```
 
-The command prompts for the email and password and stores only a bcrypt hash. Open `/admin/login` to sign in.
+The command asks for an email and password and stores a bcrypt hash. Optional ADMIN_EMAIL and ADMIN_PASSWORD environment variables can supply those inputs. Never commit credentials. Set SESSION_SECRET to at least 32 random characters before production use (`openssl rand -hex 32`). Production sessions require HTTPS.
 
-## Production data and security setup
+## Store operations
 
-The local product API, SQLite schema, order endpoint, inventory deduction, and admin authentication are implemented. The current visual storefront still contains presentation seed data for its premium hero/product-card treatment; the next UI wiring step is to hydrate those cards from `/api/products` and add the checkout form that posts to `/api/orders`.
+In admin, configure delivery fees and free-delivery threshold in PKR, support contact, and wallet account details. Add/edit products with accurate descriptions, prices, images, and inventory. Archiving hides a product while preserving its order history. Cancelling an order restores stock once; cancelled orders cannot be reopened. Wallet payments require manual verification and do not charge a customer automatically.
 
-The next production setup steps are:
-
-1. Add the admin product/order/settings screens and protect their mutations with `getAdminId()`.
-2. Add the checkout and order-tracking pages.
-3. Add local admin image upload validation under `public/uploads/products/`.
-4. For deployment, replace SQLite with PostgreSQL and local uploads with persistent object storage.
-5. Add HTTPS and set all values in `.env`.
-
-No production credentials or JazzCash account details are included.
+The seeded catalogue and AI-generated visuals are development examples. Confirm physical stock, specifications, pricing, warranty, delivery promises, and return terms before accepting public orders. The site labels generated visuals as illustrative.
 
 ## Validation
 
 ```bash
-npm run lint
+npx tsc --noEmit
 npm run build
 ```
 
-The project currently has no automated test suite yet. `npm run lint` completes with only the two existing remote-image optimization warnings, and `npm run build` passes.
+Commerce and admin API integration checks use disposable records/database copies. Desktop and mobile Chrome checks cover catalogue, bag, checkout, product details, tracking, and admin entry. See [implementation review](docs/implementation-review.md) for findings and scope.
+
+## Hosting
+
+The site currently runs locally. Deploy to a Node.js host with persistent SQLite storage (or migrate to a production database), persistent product upload storage, HTTPS, and a secure SESSION_SECRET. Payment gateway charges, courier booking, email/SMS notifications, and public hosting are not configured.
+
+## Reinstall dependencies and free disk space
+
+This is a Node.js project. `package.json` lists its direct dependencies and
+`package-lock.json` pins the exact dependency tree, so use those files instead
+of a Python `requirements.txt`:
+
+```bash
+npm ci
+```
+
+`npm ci` recreates `node_modules` from the lockfile. To remove installed
+dependencies and the regenerable Next.js build cache when you need disk space,
+stop the development server first, then run:
+
+```bash
+rm -rf node_modules .next
+```
+
+Run `npm ci` and the local setup commands above to restore the project. You can
+also clear npm's download cache with `npm cache clean --force`; npm can download
+those packages again during installation.
+
+Keep `package.json`, `package-lock.json`, `.env` (or a securely stored copy of
+its settings), and `dev.db` if you want to preserve local configuration and
+data. Deleting `dev.db` removes the local SQLite database and its records.

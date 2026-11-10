@@ -1,138 +1,358 @@
 "use client";
-
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { SiteFooter } from "@/components/site-footer";
+import { useRef, useState } from "react";
 import {
   ArrowRight,
-  Check,
-  Heart,
-  Menu,
-  Moon,
-  Search,
-  ShoppingBag,
-  Sparkles,
-  Sun,
-  Truck,
-  X,
+  ArrowUpRight,
+  Headphones,
+  Watch,
+  Speaker,
   Zap,
+  Truck,
+  ShieldCheck,
+  MessageCircle,
+  PackageCheck,
+  ChevronDown,
+  Plus,
+  Minus,
 } from "lucide-react";
-
-type Product = {
-  id: number;
-  name: string;
-  category: string;
-  price: number;
-  oldPrice?: number;
-  image: string;
-  badge?: string;
-  color: string;
-};
-
-const products: Product[] = [
-  { id: 1, name: "AeroFit Pro Smartwatch", category: "Smartwatches", price: 7499, oldPrice: 8999, image: "https://images.unsplash.com/photo-1544117519-31a4b719223d?auto=format&fit=crop&w=900&q=85", badge: "Best seller", color: "#dce9ff" },
-  { id: 2, name: "Sonic Buds Air", category: "Wireless Earbuds", price: 4299, oldPrice: 5499, image: "https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?auto=format&fit=crop&w=900&q=85", badge: "New", color: "#e7e4ff" },
-  { id: 3, name: "Beam Mini Speaker", category: "Speakers", price: 3699, image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=900&q=85", color: "#dff6f1" },
-  { id: 4, name: "FlowCharge 20K", category: "Power Banks", price: 5499, oldPrice: 6499, image: "https://images.unsplash.com/photo-1609592424773-9aa8f7b4a8c8?auto=format&fit=crop&w=900&q=85", badge: "Popular", color: "#fff0d9" },
-  { id: 5, name: "Studio One Headphones", category: "Headphones", price: 8999, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=85", color: "#f0e5ff" },
-  { id: 6, name: "SwiftCharge 65W", category: "Chargers & Cables", price: 2999, image: "https://images.unsplash.com/photo-1625841704674-cc967e23b7a1?auto=format&fit=crop&w=900&q=85", color: "#e7f0ff" },
-];
-
-const categories = ["All products", "Smartwatches", "Wireless Earbuds", "Speakers", "Headphones", "Power Banks"];
-const money = (value: number) => `PKR ${value.toLocaleString("en-PK")}`;
-
+import { StoreShell } from "@/components/store-shell";
+import { ProductCard } from "@/components/product-card";
+import { useShop } from "@/components/shop-provider";
+import { money, whatsapp } from "@/lib/shop";
+const categories = [
+  ["All the good stuff", "All", PackageCheck],
+  ["Plug into your world", "Headphones", Headphones],
+  ["A little more connected", "Smartwatches", Watch],
+  ["Sound that goes places", "Speakers", Speaker],
+  ["Keep your day going", "Power Banks", Zap],
+] as const;
 export default function Home() {
-  const router = useRouter();
-  const [category, setCategory] = useState("All products");
-  const [query, setQuery] = useState("");
-  const [cart, setCart] = useState<Product[]>([]);
-  const [cartHydrated, setCartHydrated] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
-  const [dark, setDark] = useState(false);
-  const [saved, setSaved] = useState<number[]>([]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const savedCart = window.localStorage.getItem("shayo-cart");
-      if (savedCart) {
-        try {
-          const parsed = JSON.parse(savedCart);
-          if (Array.isArray(parsed)) setCart(parsed);
-        } catch {
-          window.localStorage.removeItem("shayo-cart");
-        }
-      }
-      setCartHydrated(true);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (cartHydrated) window.localStorage.setItem("shayo-cart", JSON.stringify(cart));
-  }, [cart, cartHydrated]);
-
-  const filtered = useMemo(() => products.filter((product) => {
-    const matchesCategory = category === "All products" || product.category === category;
-    const matchesSearch = `${product.name} ${product.category}`.toLowerCase().includes(query.toLowerCase());
-    return matchesCategory && matchesSearch;
-  }), [category, query]);
-
-  const cartTotal = cart.reduce((sum, item) => sum + item.price, 0);
-
+  const shop = useShop(),
+    [category, setCategory] = useState("All"),
+    [faq, setFaq] = useState<number | null>(0);
+  const stage = useRef<HTMLDivElement>(null);
+  const featured = shop.products
+    .filter((p) => category === "All" || p.category === category)
+    .slice(0, 4);
   return (
-    <main className={dark ? "site dark" : "site"}>
-      <div className="announcement"><Sparkles size={14} /> Free delivery on orders over PKR 5,000 <span>•</span> Cash on delivery available nationwide</div>
-      <header className="header">
-        <Link className="logo" href="/">SHAYO<span>.</span></Link>
-        <nav className={menuOpen ? "nav open" : "nav"}>
-          <a href="/products">Shop</a><a href="#categories">Categories</a><a href="/about">About</a><a href="#contact">Contact</a>
-        </nav>
-        <div className="header-actions">
-          <label className="search"><Search size={17} /><input aria-label="Search products" placeholder="Search gadgets..." value={query} onChange={(e) => setQuery(e.target.value)} /></label>
-          <button className="icon-button" aria-label="Toggle theme" onClick={() => setDark(!dark)}>{dark ? <Sun size={19} /> : <Moon size={19} />}</button>
-          <a className="icon-button desktop-only" aria-label="Wishlist" href="/products"><Heart size={19} /></a>
-          <button className="bag-button" aria-label="Open cart" onClick={() => setCartOpen(true)}><ShoppingBag size={19} /><b>{cart.length}</b></button>
-          <button className="menu-button" aria-label="Open menu" onClick={() => setMenuOpen(!menuOpen)}><Menu size={22} /></button>
-        </div>
-      </header>
-
-      <section className="hero">
+    <StoreShell>
+      <section className="home-hero">
         <div className="hero-copy">
-          <div className="eyebrow"><span className="eyebrow-dot" /> The everyday tech edit</div>
-          <h1>Better tech.<br /><em>Better days.</em></h1>
-          <p className="urdu-kicker" lang="ur" dir="rtl">سستی اور اچھی ٹیکنالوجی آپ کے ہاتھوں میں۔</p>
-          <p>Thoughtfully chosen gadgets that fit your life, look good doing it, and arrive at your door anywhere in Pakistan.</p>
-          <div className="hero-actions"><a className="primary-button" href="#shop">Explore collection <ArrowRight size={17} /></a><a className="text-link" href="#why-shayo">Why SHAYO <span>↗</span></a></div>
-          <div className="hero-proof"><div className="avatars"><span>SA</span><span>HM</span><span>AK</span></div><div><strong>4.9/5</strong><small>Loved by 2,000+ customers</small></div></div>
+          <div className="eyebrow">
+            <i /> THE EVERYDAY, UPGRADED.
+          </div>
+          <h1>
+            Good tech.
+            <br />
+            Great days.<span className="hero-period">*</span>
+          </h1>
+          <p>
+            For your commute. Your playlist. Your everyday.
+            <br className="desktop-break" /> Discover little upgrades that make
+            a big difference.
+          </p>
+          <Link className="button primary" href="/products">
+            Find your next favourite <ArrowUpRight size={19} />
+          </Link>
+          <div className="hero-footnote">
+            <span className="tiny-star">✳</span> Thoughtfully picked. Fairly
+            priced.
+            <br />
+            Delivered anywhere in Pakistan.
+          </div>
         </div>
-        <div className="hero-art">
-          <div className="hero-orb orb-one" /><div className="hero-orb orb-two" />
-          <div className="product-stage"><div className="watch-face"><div className="watch-time">10<span>:</span>09</div><div className="watch-date">MON 24 JUN</div><div className="watch-ring" /></div><div className="watch-strap" /></div>
-          <div className="floating-card"><Zap size={16} fill="currentColor" /><span>Up to 7 days<br /><b>battery life</b></span></div>
-          <div className="hero-label">AEROFIT PRO <span>01 / 06</span></div>
+        <div
+          className="hero-scene"
+          ref={stage}
+          onPointerMove={(e) => {
+            if (!stage.current) return;
+            const b = stage.current.getBoundingClientRect();
+            stage.current.style.setProperty(
+              "--rx",
+              `${-(e.clientY - b.top - b.height / 2) / 55}deg`,
+            );
+            stage.current.style.setProperty(
+              "--ry",
+              `${(e.clientX - b.left - b.width / 2) / 55}deg`,
+            );
+          }}
+          onPointerLeave={() => {
+            stage.current?.style.setProperty("--rx", "0deg");
+            stage.current?.style.setProperty("--ry", "0deg");
+          }}
+        >
+          <span className="scene-top">THE SOUND OF A BETTER DAY</span>
+          <div className="scene-orbit" />
+          <div className="hero-product">
+            <img
+              src="/images/studio-headphones.webp"
+              alt="Ivory Studio One wireless headphones with orange ear cushions"
+              fetchPriority="high"
+            />
+          </div>
+          <div className="floating-note">
+            <span className="status-dot" /> YOUR WORLD. ON MUTE.
+            <Headphones size={16} />
+          </div>
+          <div className="scene-bottom">
+            <div>
+              <small>MEET YOUR NEW DAILY ESSENTIAL</small>
+              <strong>Studio One Headphones</strong>
+            </div>
+            <Link
+              href="/products/studio-one-headphones"
+              className="scene-arrow"
+              aria-label="Explore Studio One headphones"
+            >
+              <ArrowUpRight size={24} />
+            </Link>
+          </div>
+          <span className="scene-index">01 — THE AUDIO EDIT</span>
         </div>
       </section>
-
-      <section className="trust-row"><div><Truck size={20} /><span><b>Fast delivery</b><small>Across Pakistan</small></span></div><div><Check size={20} /><span><b>Quality checked</b><small>Every product, always</small></span></div><div><ShoppingBag size={20} /><span><b>Easy checkout</b><small>COD & wallet payments</small></span></div><div><Heart size={20} /><span><b>Real support</b><small>Here when you need us</small></span></div></section>
-
-      <section className="section" id="shop">
-        <div className="section-heading"><div><div className="eyebrow">Curated for you</div><h2>Good things,<br /><em>in small packages.</em></h2></div><a className="text-link" href="/products">View all products <ArrowRight size={16} /></a></div>
-        <div className="filter-row" id="categories">{categories.map((item) => <button key={item} className={category === item ? "filter active" : "filter"} onClick={() => setCategory(item)}>{item}</button>)}</div>
-        <div className="product-grid">{filtered.map((product) => <article className="product-card" key={product.id}><div className="product-image" style={{ background: product.color }}><Image src={product.image} alt={product.name} width={600} height={600} /><button className={saved.includes(product.id) ? "heart saved" : "heart"} aria-label={`Save ${product.name}`} onClick={() => setSaved(saved.includes(product.id) ? saved.filter((id) => id !== product.id) : [...saved, product.id])}><Heart size={17} fill={saved.includes(product.id) ? "currentColor" : "none"} /></button>{product.badge && <span className="badge">{product.badge}</span>}</div><div className="product-meta"><span>{product.category}</span><h3>{product.name}</h3><div className="price-row"><strong>{money(product.price)}</strong>{product.oldPrice && <del>{money(product.oldPrice)}</del>}<button className="add-button" onClick={() => { setCart([...cart, product]); setCartOpen(true); }} aria-label={`Add ${product.name} to cart`}>+</button></div></div></article>)}</div>
+      <div className="benefits-strip">
+        <div>
+          <Truck size={18} />
+          <span>Pakistan-wide delivery</span>
+        </div>
+        <span className="strip-dot">✳</span>
+        <div>
+          <PackageCheck size={18} />
+          <span>Cash on delivery</span>
+        </div>
+        <span className="strip-dot">✳</span>
+        <div>
+          <ShieldCheck size={18} />
+          <span>Thoughtfully selected</span>
+        </div>
+        <span className="strip-dot">✳</span>
+        <div>
+          <MessageCircle size={18} />
+          <span>Real people. Real support.</span>
+        </div>
+      </div>
+      <section className="collection-section page-width" id="collection">
+        <div className="section-top">
+          <div>
+            <span className="eyebrow">SMALL UPGRADES. BIG ENERGY.</span>
+            <h2>
+              Your everyday,
+              <br />
+              <span>with a little extra.</span>
+            </h2>
+          </div>
+          <div className="section-description">
+            <p>
+              The useful. The beautiful. The why-didn’t-I-get-this-sooner.
+              <br />
+              Meet the things you’ll reach for, every single day.
+            </p>
+            <Link className="arrow-link" href="/products">
+              Explore the whole collection <ArrowUpRight size={17} />
+            </Link>
+          </div>
+        </div>
+        <div className="category-tabs" aria-label="Filter featured products">
+          {[
+            "All",
+            "Wireless Earbuds",
+            "Headphones",
+            "Smartwatches",
+            "Speakers",
+            "Power Banks",
+          ].map((c) => (
+            <button
+              key={c}
+              onClick={() => setCategory(c)}
+              className={category === c ? "selected" : ""}
+            >
+              {c === "All" ? "All the good stuff" : c}
+            </button>
+          ))}
+        </div>
+        {shop.loading ? (
+          <div className="product-grid">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="skeleton" />
+            ))}
+          </div>
+        ) : shop.error ? (
+          <div role="alert" className="empty-state">
+            <p>{shop.error}</p>
+            <button className="button" onClick={() => shop.refresh()}>
+              Try again
+            </button>
+          </div>
+        ) : featured.length ? (
+          <div className="product-grid">
+            {featured.map((p, i) => (
+              <ProductCard product={p} index={i} key={p.id} />
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <p>More good things are on their way.</p>
+            <Link href="/products" className="arrow-link">
+              Browse all products <ArrowRight size={15} />
+            </Link>
+          </div>
+        )}
       </section>
-
-      <section className="feature-banner"><div><div className="eyebrow">Your new daily essential</div><h2>Small upgrades.<br /><em>Big difference.</em></h2><p className="urdu-kicker" lang="ur" dir="rtl">روزمرہ کی زندگی کے لیے بہتر ٹیک۔</p><p>From your first notification to your last playlist, find tech that keeps up.</p><a className="primary-button light" href="#shop">Shop the edit <ArrowRight size={17} /></a></div><div className="banner-art"><div className="earbud left" /><div className="earbud right" /><div className="sound-wave wave-one" /><div className="sound-wave wave-two" /></div></section>
-
-      <section className="why section" id="why-shayo"><div className="section-heading"><div><div className="eyebrow">The SHAYO standard</div><h2>Tech shopping,<br /><em>done properly.</em></h2></div></div><div className="why-grid"><div><span className="why-number">01</span><h3>Only the good stuff</h3><p>We keep the catalogue focused on useful, well-designed products we would happily use ourselves. Every item is selected for everyday value, not just flashy features.</p><a className="why-link" href="/products">Explore the collection <ArrowRight size={14} /></a></div><div><span className="why-number">02</span><h3>Clear, honest pricing</h3><p>No confusing surprises at checkout. What you see is what you pay, with delivery details upfront and real discounts calculated from the original price.</p><a className="why-link" href="#shop">See current offers <ArrowRight size={14} /></a></div><div><span className="why-number">03</span><h3>Human support</h3><p>Questions before or after your order? Reach us directly on WhatsApp at 03162609779. We keep support simple, friendly, and genuinely useful.</p><a className="why-link" href="https://wa.me/923162609779" target="_blank" rel="noreferrer">Chat with SHAYO <ArrowRight size={14} /></a></div></div></section>
-
-      <section className="sister-banner"><div><div className="eyebrow">Part of the same creative family</div><h2>Powered by ideas.<br /><em>Built for real life.</em></h2><p>SHAYO is a sister company of ShyonLabs, the AI-powered software and digital products studio. Together, we connect thoughtful digital thinking with useful everyday tech.</p><a className="sister-link" href="https://www.shyonlabs.tech/" target="_blank" rel="noreferrer">Visit ShyonLabs <ArrowRight size={15} /></a></div><div className="sister-mark"><span>SHAYO</span><i>×</i><span>SHYON<br />LABS</span></div></section>
-
-      <SiteFooter />
-
-      {cartOpen && <div className="drawer-backdrop" onClick={() => setCartOpen(false)}><aside className="cart-drawer" onClick={(e) => e.stopPropagation()}><div className="drawer-heading"><h2>Your bag <small>{cart.length} items</small></h2><button className="icon-button" onClick={() => setCartOpen(false)} aria-label="Close cart"><X size={20} /></button></div>{cart.length === 0 ? <div className="empty-cart"><ShoppingBag size={38} /><h3>Your bag is waiting</h3><p>Add something useful to get started.</p><button className="primary-button" onClick={() => setCartOpen(false)}>Continue shopping</button></div> : <><div className="cart-items">{cart.map((item, index) => <div className="cart-item" key={`${item.id}-${index}`}><Image src={item.image} alt="" width={67} height={67} /><div><span>{item.category}</span><h3>{item.name}</h3><strong>{money(item.price)}</strong></div><button aria-label="Remove item" onClick={() => setCart(cart.filter((_, i) => i !== index))}><X size={15} /></button></div>)}</div><div className="cart-summary"><div><span>Subtotal</span><strong>{money(cartTotal)}</strong></div><div><span>Delivery</span><strong>{cartTotal >= 5000 ? "Free" : money(250)}</strong></div><div className="total"><span>Total</span><strong>{money(cartTotal + (cartTotal >= 5000 ? 0 : 250))}</strong></div><button className="primary-button checkout" onClick={() => { setCartOpen(false); router.push("/cart"); }}>Continue to cart <ArrowRight size={17} /></button><small>Secure checkout · COD available</small></div></>}</aside></div>}
-    </main>
+      <section className="audio-feature page-width">
+        <div className="audio-copy">
+          <div className="eyebrow">
+            <i /> LESS NOISE. MORE YOU.
+          </div>
+          <h2>
+            Find your
+            <br />
+            <em>happy frequency.</em>
+          </h2>
+          <p>
+            For the main-character walk. The deep-focus hour.
+            <br />
+            The one song you always play twice.
+          </p>
+          <Link
+            className="button cream"
+            href="/products?category=Wireless%20Earbuds"
+          >
+            Meet your sound <ArrowUpRight size={18} />
+          </Link>
+          <small>THE AUDIO ESSENTIALS — SHAYO</small>
+        </div>
+        <div className="audio-visual">
+          <div className="sound-ring ring-one" />
+          <div className="sound-ring ring-two" />
+          <div className="sound-ring ring-three" />
+          <img
+            src="/images/buds.webp"
+            alt="Sonic Buds Air wireless earbuds and charging case"
+            loading="lazy"
+          />
+          <span className="audio-caption">
+            A LITTLE SPACE
+            <br />
+            FOR YOURSELF.
+          </span>
+        </div>
+      </section>
+      <section className="category-section page-width">
+        <div className="section-top">
+          <div>
+            <span className="eyebrow">WHAT’S YOUR EVERYDAY MISSING?</span>
+            <h2>
+              There’s a good
+              <br />
+              <span>thing for that.</span>
+            </h2>
+          </div>
+          <Link href="/products" className="arrow-link">
+            Find your thing <ArrowUpRight size={16} />
+          </Link>
+        </div>
+        <div className="category-grid">
+          {categories.slice(1).map(([caption, c, Icon], i) => (
+            <Link
+              href={`/products?category=${encodeURIComponent(c)}`}
+              className="category-tile"
+              key={c}
+            >
+              <span className="category-number">0{i + 1}</span>
+              <Icon size={38} strokeWidth={1} />
+              <div>
+                <small>{caption}</small>
+                <h3>{c === "Power Banks" ? "Power & charging" : c}</h3>
+              </div>
+              <ArrowUpRight size={20} />
+            </Link>
+          ))}
+        </div>
+      </section>
+      <section className="brand-note">
+        <div className="page-width brand-note-inner">
+          <span className="brand-asterisk">✳</span>
+          <div>
+            <div className="eyebrow">NOT MORE STUFF. MORE GOOD DAYS.</div>
+            <h2>
+              Life’s complicated.
+              <br />
+              Your tech shouldn’t be.
+            </h2>
+            <p>
+              We’re SHAYO. We find well-designed, useful tech and make it easy
+              to get your hands on. Clear prices. A simpler checkout. People you
+              can actually talk to.
+            </p>
+            <Link href="/about" className="arrow-link">
+              A little more about us <ArrowUpRight size={17} />
+            </Link>
+          </div>
+          <div className="brand-side-note">
+            BUILT FOR YOUR WORLD.
+            <br />
+            ROOTED IN PAKISTAN.
+            <br />
+            <span>اچھی ٹیک، اچھے دن۔</span>
+          </div>
+        </div>
+      </section>
+      <section className="faq-section page-width">
+        <div>
+          <span className="eyebrow">GOOD QUESTIONS. STRAIGHT ANSWERS.</span>
+          <h2>
+            A little clarity.
+            <br />
+            <span>A lot less hassle.</span>
+          </h2>
+          <p>Still wondering about something?</p>
+          <a
+            className="arrow-link"
+            href={whatsapp(shop.settings.whatsappNumber)}
+          >
+            Let’s talk on WhatsApp <ArrowUpRight size={17} />
+          </a>
+        </div>
+        <div className="faq-list">
+          {[
+            [
+              "Do you deliver to my city?",
+              "We deliver across Pakistan. Delivery cost is shown before you place your order, and we confirm timing with you after ordering.",
+            ],
+            [
+              "Can I pay when my order arrives?",
+              "Yes. Choose cash on delivery at checkout and pay the courier when your order arrives. Enabled wallet transfer options are also shown at checkout.",
+            ],
+            [
+              "How much is delivery?",
+              `Delivery is ${money(shop.settings.deliveryFeePaisa / 100)}. Orders of ${money(shop.settings.freeDeliveryPaisa / 100)} or more qualify for free delivery. Your exact total is always shown before ordering.`,
+            ],
+            [
+              "How can I get help with my order?",
+              "Use Track your order with your order number and mobile number, or message our team on WhatsApp. For product issues or return requests, contact us with your order details.",
+            ],
+          ].map(([q, a], i) => (
+            <div className="faq-item" key={q}>
+              <button
+                aria-expanded={faq === i}
+                aria-controls={`faq-${i}`}
+                onClick={() => setFaq(faq === i ? null : i)}
+              >
+                {q}
+                {faq === i ? <Minus size={18} /> : <Plus size={18} />}
+              </button>
+              {faq === i && <p id={`faq-${i}`}>{a}</p>}
+            </div>
+          ))}
+        </div>
+      </section>
+      <div className="closing-line page-width">
+        <span>GOOD TECH. GOOD ENERGY. GOOD TO GO.</span>
+        <Link href="/products">
+          Make your everyday better <ArrowRight size={18} />
+        </Link>
+      </div>
+    </StoreShell>
   );
 }
